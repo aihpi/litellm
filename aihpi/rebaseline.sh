@@ -28,8 +28,16 @@ while IFS=$'\t' read -r ours upstream_path; do
     echo "ERROR: $upstream_path does not exist" >&2
     exit 1
   fi
+  new_sha=$(shasum -a 256 "$upstream_path" | awk '{print $1}')
+  old_sha=$(git show HEAD:aihpi/baseline.sha256 2>/dev/null | awk -F'\t' -v n="$ours" '$3 == n {print $1}')
+  if [ -n "$old_sha" ] && [ "$new_sha" != "$old_sha" ] && git diff --quiet HEAD -- "$SCRIPT_DIR/$ours"; then
+    echo "ERROR: upstream changed $upstream_path but $ours is untouched since HEAD." >&2
+    echo "Baselining now would hide a stale copy from the build guard. Merge upstream's" >&2
+    echo "change into $ours first (git merge-file against the old baseline blob), then rerun." >&2
+    exit 1
+  fi
   printf '%s\t%s\t%s\n' \
-    "$(shasum -a 256 "$upstream_path" | awk '{print $1}')" \
+    "$new_sha" \
     "$(git hash-object "$upstream_path")" \
     "$ours" >> "$SCRIPT_DIR/baseline.sha256"
   echo "baselined $upstream_path"

@@ -115,7 +115,7 @@ The anchors are:
 | File | Anchor |
 |---|---|
 | `src/app/login/LoginPage.tsx` | `<h2 className="text-3xl font-semibold text-foreground">🚅 LiteLLM</h2>` |
-| `src/components/leftnav.tsx` | the `<Link ... aria-label="LiteLLM home">` logo block |
+| `src/components/leftnav.tsx` | `aria-label="LiteLLM home"` must exist (the logo is hidden by CSS, not removed) |
 | `src/app/layout.tsx` | the `export const metadata: Metadata = {...}` block |
 | `src/app/globals.css` | the `--primary` / `--primary-foreground` declarations |
 | `discovery_endpoints/ui_discovery_endpoints.py` | `sso_configured: Final = has_user_setup_sso()` |
@@ -158,10 +158,13 @@ overlap fails the step, so nothing is pushed and the branch stays buildable.
 
 To resolve one by hand:
 
-1. `diff aihpi/<copy> <the upstream path from manifest.txt>` to see both our additions and
-   upstream's new work
-2. re-apply the fork additions on top of upstream's current version
-3. from a pristine tree (`git checkout -- litellm/ ui/`), run `bash aihpi/rebaseline.sh`
+1. for **every** copy the step named (it reports all of them, not just the first), fetch the
+   old baseline blob from `baseline.sha256` and run
+   `git merge-file -L ours -L baseline -L upstream aihpi/<copy> <(git cat-file blob <blob>) <upstream path>`
+2. resolve the markers, keeping upstream's work and re-adding only ours
+3. from a pristine tree (`git checkout -- litellm/ ui/`), run `bash aihpi/rebaseline.sh`. It refuses
+   to baseline a copy that upstream changed but you did not touch, because that would hide the
+   stale copy from the build guard
 
 `rebaseline.sh` refuses to run on a dirty tree, because baselining a patched tree would record our
 own output as the baseline and disable the guard permanently.

@@ -202,10 +202,15 @@ jobs:
             git cat-file blob "$recorded_blob" > "$base"
             if ! git merge-file -L ours -L baseline -L upstream "$copy" "$base" "$upstream_path"; then
               echo "ERROR: could not re-sync $copy onto $upstream_path without conflicts." >&2
-              echo "Resolve the markers by hand, then run: bash aihpi/rebaseline.sh" >&2
-              exit 1
+              failed="$failed $copy"
             fi
           done < aihpi/manifest.txt
+
+          if [ -n "${failed:-}" ]; then
+            echo "Copies needing a hand merge:$failed" >&2
+            echo "Resolve the markers in each, then run: bash aihpi/rebaseline.sh" >&2
+            exit 1
+          fi
 
           if git diff --quiet -- aihpi; then
             echo "All copies still match their baseline"
